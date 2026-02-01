@@ -101,6 +101,16 @@ class ProductRepository extends ChangeNotifier {
     }).toList();
   }
 
+  // المنتجات العادية (ليست عروض تايتل)
+  List<Product> get regularProducts {
+    return activeProducts.where((p) => !p.isOffer).toList();
+  }
+
+  // عروض التايتل فقط
+  List<Product> get offerProducts {
+    return activeProducts.where((p) => p.isOffer).toList();
+  }
+
   Future<void> addProduct(Product product) async {
     try {
       debugPrint('⚡ Adding product to Supabase: ${product.id}');

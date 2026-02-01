@@ -33,8 +33,8 @@ class _ManageOffersScreenState extends State<ManageOffersScreen> {
         listenable: ProductRepository(),
         builder: (context, child) {
           // عرض المنتجات التي تم تفعيلها كعروض فقط (isOffer = true)
-          final allProducts = ProductRepository().products;
-          final products = allProducts.where((p) => p.isOffer).toList();
+          // عرض المنتجات التي تم تفعيلها كعروض فقط (isOffer = true)
+          final products = ProductRepository().offerProducts;
 
           if (products.isEmpty) {
             return GlobalRefreshIndicator(

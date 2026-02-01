@@ -31,8 +31,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
       body: ListenableBuilder(
         listenable: ProductRepository(),
         builder: (context, child) {
-          // عرض جميع المنتجات النشطة
-          final products = ProductRepository().activeProducts;
+          // عرض المنتجات العادية فقط (بدون عروض التايتل)
+          final products = ProductRepository().regularProducts;
 
           if (products.isEmpty) {
             return GlobalRefreshIndicator(
