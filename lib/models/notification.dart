@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum NotificationType {
   outbid, // تم تجاوز المزايدة
   auctionEnd, // انتهى المزاد
@@ -51,7 +49,7 @@ class AppNotification {
       'id': id,
       'title': title,
       'message': message,
-      'timestamp': Timestamp.fromDate(timestamp),
+      'timestamp': timestamp.toIso8601String(),
       'type': type.index,
       'isRead': isRead,
       'productId': productId,
@@ -63,9 +61,9 @@ class AppNotification {
       id: json['id'],
       title: json['title'],
       message: json['message'],
-      timestamp: json['timestamp'] is Timestamp
-          ? (json['timestamp'] as Timestamp).toDate()
-          : DateTime.parse(json['timestamp']),
+      timestamp: json['timestamp'] is String
+          ? DateTime.parse(json['timestamp'])
+          : DateTime.now(), // Fallback
       type: NotificationType.values[json['type']],
       isRead: json['isRead'] ?? false,
       productId: json['productId'],

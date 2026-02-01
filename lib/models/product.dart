@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Product {
   final String id;
   final String name;
@@ -90,8 +88,8 @@ class Product {
       'price': price,
       'startingPrice': startingPrice,
       'realPrice': realPrice,
-      'timestamp': Timestamp.fromDate(timestamp),
-      'endTime': endTime != null ? Timestamp.fromDate(endTime!) : null,
+      'timestamp': timestamp.toIso8601String(),
+      'endTime': endTime?.toIso8601String(),
       'images': images,
       'isDarkBg': isDarkBg,
       'description': description,
@@ -112,16 +110,12 @@ class Product {
       price: json['price']?.toString() ?? '0',
       startingPrice: json['startingPrice']?.toString(),
       realPrice: json['realPrice']?.toString(),
-      timestamp: json['timestamp'] is Timestamp
-          ? (json['timestamp'] as Timestamp).toDate()
-          : (json['timestamp'] is String
-                ? DateTime.parse(json['timestamp'])
-                : DateTime.now()),
-      endTime: json['endTime'] is Timestamp
-          ? (json['endTime'] as Timestamp).toDate()
-          : (json['endTime'] is String
-                ? DateTime.parse(json['endTime'])
-                : null),
+      timestamp: json['timestamp'] is String
+          ? DateTime.parse(json['timestamp'])
+          : DateTime.now(), // Fallback
+      endTime: json['endTime'] is String
+          ? DateTime.parse(json['endTime'])
+          : null,
       images:
           (json['images'] as List<dynamic>?)
               ?.map((e) => e.toString())
