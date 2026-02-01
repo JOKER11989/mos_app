@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/product_repository.dart';
 import '../data/bids_repository.dart';
 import '../widgets/global_refresh_indicator.dart';
@@ -181,11 +181,12 @@ class ManageEndedAuctionsScreen extends StatelessWidget {
   void _showWinnerInfo(BuildContext context, String userId) {
     showDialog(
       context: context,
-      builder: (ctx) => FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        future: FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .get(),
+      builder: (ctx) => FutureBuilder<Map<String, dynamic>?>(
+        future: Supabase.instance.client
+            .from('users')
+            .select()
+            .eq('id', userId)
+            .maybeSingle(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const AlertDialog(
@@ -200,7 +201,8 @@ class ManageEndedAuctionsScreen extends StatelessWidget {
             );
           }
 
-          final userData = snapshot.data?.data();
+          final userData = snapshot.data;
+          // Note: User.fromJson handles parsing, ensure your model matches Supabase structure
           final winner = userData != null ? User.fromJson(userData) : null;
 
           return AlertDialog(

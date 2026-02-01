@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Bid {
   final String id;
   final String productId;
@@ -42,7 +40,7 @@ class Bid {
       'userId': userId,
       'bidderName': bidderName,
       'amount': amount,
-      'timestamp': Timestamp.fromDate(timestamp),
+      'timestamp': timestamp.toIso8601String(),
     };
   }
 
@@ -53,9 +51,9 @@ class Bid {
       userId: json['userId'],
       bidderName: json['bidderName'],
       amount: json['amount'],
-      timestamp: json['timestamp'] is Timestamp
-          ? (json['timestamp'] as Timestamp).toDate()
-          : DateTime.parse(json['timestamp']),
+      timestamp: json['timestamp'] is String
+          ? DateTime.parse(json['timestamp'])
+          : DateTime.now(), // Fallback
     );
   }
 }
