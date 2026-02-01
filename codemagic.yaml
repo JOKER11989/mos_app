@@ -1,0 +1,32 @@
+workflows:
+  default-workflow:
+    name: iOS Unsigned Build (AltStore)
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set up code signing settings
+        script: |
+          # Disable code signing in Xcode project
+          sed -i '' 's/CODE_SIGNING_REQUIRED = YES/CODE_SIGNING_REQUIRED = NO/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGNING_ALLOWED = YES/CODE_SIGNING_ALLOWED = NO/g' ios/Runner.xcodeproj/project.pbxproj
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Install Pods
+        script: |
+          find . -name "Podfile" -exec dir {} \;
+          cd ios && pod install && cd ..
+      - name: Build iOS Runner.app
+        script: |
+          flutter build ios --release --no-codesign
+      - name: Package IPA
+        script: |
+          cd build/ios/iphoneos
+          mkdir Payload
+          cp -r Runner.app Payload/
+          zip -r Runner.ipa Payload
+          mv Runner.ipa ../../../Runner.ipa
+    artifacts:
+      - Runner.ipa
