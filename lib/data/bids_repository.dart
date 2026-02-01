@@ -18,14 +18,12 @@ class BidsRepository extends ChangeNotifier {
     if (_isInitialized) return;
 
     // Supabase Realtime for 'bids' table
-    _supabase
-        .from('bids')
-        .stream(primaryKey: ['id'])
-        .order('timestamp', ascending: false)
-        .listen((data) {
-          _bidHistory = data.map((json) => Bid.fromJson(json)).toList();
-          notifyListeners();
-        });
+    // Note: We don't use .order() here because it's unreliable in streams
+    // Instead, we sort in getBidsForProduct() method
+    _supabase.from('bids').stream(primaryKey: ['id']).listen((data) {
+      _bidHistory = data.map((json) => Bid.fromJson(json)).toList();
+      notifyListeners();
+    });
 
     _isInitialized = true;
   }

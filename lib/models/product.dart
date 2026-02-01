@@ -4,7 +4,6 @@ class Product {
   final String price; // السعر الحالي (أعلى مزايدة)
   final String startingPrice; // سعر البداية
   final String? realPrice; // السعر الحقيقي للمنتج (سعر السوق)
-  final String timeLeft;
   final DateTime timestamp; // وقت الإضافة
   final DateTime? endTime; // وقت انتهاء المزاد
   final List<String> images;
@@ -24,7 +23,6 @@ class Product {
     required this.price,
     String? startingPrice,
     this.realPrice,
-    this.timeLeft = '00h 00m 00s',
     required this.timestamp,
     this.endTime,
     required this.images,
@@ -40,6 +38,22 @@ class Product {
   }) : startingPrice =
            startingPrice ??
            price; // إذا لم يتم تحديد سعر البداية، استخدم السعر الحالي
+
+  // حساب الوقت المتبقي ديناميكياً
+  String get timeLeft {
+    if (endTime == null) return '00h 00m 00s';
+
+    final now = DateTime.now();
+    final difference = endTime!.difference(now);
+
+    if (difference.isNegative) return '00h 00m 00s';
+
+    final hours = difference.inHours;
+    final minutes = difference.inMinutes.remainder(60);
+    final seconds = difference.inSeconds.remainder(60);
+
+    return '${hours.toString().padLeft(2, '0')}h ${minutes.toString().padLeft(2, '0')}m ${seconds.toString().padLeft(2, '0')}s';
+  }
 
   Product copyWith({
     String? id,

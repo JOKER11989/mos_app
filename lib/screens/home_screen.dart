@@ -70,7 +70,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ListenableBuilder(
                 listenable: ProductRepository(),
                 builder: (context, child) {
-                  final offers = ProductRepository().offerProducts;
+                  final allProducts = ProductRepository().activeProducts;
+                  final offers = allProducts.where((p) => p.isOffer).toList();
                   return OffersCarousel(products: offers);
                 },
               ),

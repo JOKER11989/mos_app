@@ -1,4 +1,4 @@
-package com.example.mos
+package com.mazadi.joker
 
 import io.flutter.embedding.android.FlutterActivity
 
