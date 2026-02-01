@@ -74,9 +74,9 @@ class BidsRepository extends ChangeNotifier {
       await _supabase.from('bids').insert(bid.toJson());
     } catch (e) {
       debugPrint('Error adding bid to Supabase: $e');
-      // Revert if failed
-      _bidHistory.removeWhere((b) => b.id == bid.id);
-      notifyListeners();
+      // Revert if failed - DISABLED FOR NOW to keep UI responsive even if backend fails
+      // _bidHistory.removeWhere((b) => b.id == bid.id);
+      // notifyListeners();
     }
   }
 

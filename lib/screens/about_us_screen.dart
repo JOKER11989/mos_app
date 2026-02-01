@@ -25,7 +25,7 @@ class AboutUsScreen extends StatelessWidget {
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             SizedBox(height: 40),
-            Text("الإصدار 1.0.0", style: TextStyle(color: Colors.grey)),
+            Text("الإصدار 1.1.1", style: TextStyle(color: Colors.grey)),
           ],
         ),
       ),
