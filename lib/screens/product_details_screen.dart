@@ -250,7 +250,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           );
 
           // Update local state variables from repo if they diverged
-          _currentPrice = productFromRepo.price;
+          // Fix for "Mismatch": Sync default bid amount when price changes
+          if (_currentPrice != productFromRepo.price) {
+            _currentPrice = productFromRepo.price;
+            final currentVal =
+                int.tryParse(_currentPrice.replaceAll(RegExp(r'[^\d]'), '')) ??
+                0;
+            // Ensure next bid is valid (if user hasn't typed a higher legacy number basically)
+            if (_bidAmount <= currentVal) {
+              _bidAmount = currentVal + 1;
+            }
+          }
+
           _startingPrice = productFromRepo.startingPrice;
           _currentBids = productFromRepo.bids;
           _currentViews = productFromRepo.views;

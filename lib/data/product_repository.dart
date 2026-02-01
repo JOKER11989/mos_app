@@ -129,6 +129,13 @@ class ProductRepository extends ChangeNotifier {
   }
 
   Future<void> updateProduct(Product product) async {
+    // Optimistic Update: Update local list immediately
+    final index = _products.indexWhere((p) => p.id == product.id);
+    if (index != -1) {
+      _products[index] = product;
+      notifyListeners();
+    }
+
     try {
       await _supabase
           .from('products')
@@ -136,6 +143,7 @@ class ProductRepository extends ChangeNotifier {
           .eq('id', product.id);
     } catch (e) {
       debugPrint('Error updating product in Supabase: $e');
+      // Revert optimization if needed, but stream usually handles correction
     }
   }
 

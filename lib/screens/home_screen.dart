@@ -137,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ListenableBuilder(
                 listenable: ProductRepository(),
                 builder: (context, child) {
-                  final allProducts = ProductRepository().activeProducts;
+                  final allProducts = ProductRepository().regularProducts;
                   List<Product> products = allProducts
                       .where(
                         (p) => p.name.toLowerCase().contains(
