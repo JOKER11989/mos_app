@@ -66,10 +66,17 @@ class BidsRepository extends ChangeNotifier {
       timestamp: DateTime.now(),
     );
 
+    // Optimistic Update
+    _bidHistory.insert(0, bid);
+    notifyListeners();
+
     try {
       await _supabase.from('bids').insert(bid.toJson());
     } catch (e) {
       debugPrint('Error adding bid to Supabase: $e');
+      // Revert if failed
+      _bidHistory.removeWhere((b) => b.id == bid.id);
+      notifyListeners();
     }
   }
 

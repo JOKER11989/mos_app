@@ -64,6 +64,12 @@ class ProductRepository extends ChangeNotifier {
 
     _isInitialized = true;
     debugPrint('✅ ProductRepository: Initialization complete');
+
+    // Fix for Race Condition: Also check auctions when Bids are loaded/updated
+    BidsRepository().addListener(() {
+      debugPrint('⚡ ProductRepository: Bids updated, re-checking auctions...');
+      checkEndedAuctions();
+    });
   }
 
   Future<void> refresh() async {
