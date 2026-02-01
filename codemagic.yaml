@@ -9,19 +9,27 @@ workflows:
       - name: Get Flutter packages
         script: |
           flutter pub get
-      - name: Install Pods
-        script: |
-          cd ios && pod install && cd ..
       - name: Build iOS Runner.app
         script: |
-          # Build unsigned release with explicit overrides to bypass signing checks
-          flutter build ios --release --no-codesign -- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
+          # Install pods first
+          cd ios && pod install && cd ..
+          
+          # Build using xcodebuild directly to override signing settings
+          xcodebuild -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/ios \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
       - name: Package IPA
         script: |
-          cd build/ios/iphoneos
+          # Path adjustment for direct xcodebuild output
+          cd build/ios/Build/Products/Release-iphoneos
           mkdir Payload
           cp -r Runner.app Payload/
           zip -r Runner.ipa Payload
-          mv Runner.ipa ../../../Runner.ipa
+          mv Runner.ipa ../../../../../Runner.ipa
     artifacts:
       - Runner.ipa
