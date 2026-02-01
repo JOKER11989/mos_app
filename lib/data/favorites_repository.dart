@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'auth_repository.dart';
 
 class FavoritesRepository extends ChangeNotifier {
@@ -7,7 +7,7 @@ class FavoritesRepository extends ChangeNotifier {
   factory FavoritesRepository() => _instance;
   FavoritesRepository._internal();
 
-  final _firestore = FirebaseFirestore.instance;
+  final _supabase = Supabase.instance.client;
   final Set<String> _favoriteIds = {};
   bool _isInitialized = false;
 
@@ -28,19 +28,27 @@ class FavoritesRepository extends ChangeNotifier {
       return;
     }
 
-    // Real-time listener for this user's favorites
-    _firestore
-        .collection('users')
-        .doc(user.id)
-        .collection('favorites')
-        .snapshots()
-        .listen((snapshot) {
-          _favoriteIds.clear();
-          for (var doc in snapshot.docs) {
-            _favoriteIds.add(doc.id);
-          }
-          notifyListeners();
-        });
+    _fetchFavorites(user.id);
+
+    // Optional: Set up real-time listener if table exists and RLS allows
+    // For now, simple fetch is safer to avoid build errors
+  }
+
+  Future<void> _fetchFavorites(String userId) async {
+    try {
+      final data = await _supabase
+          .from('favorites')
+          .select('product_id')
+          .eq('user_id', userId);
+
+      _favoriteIds.clear();
+      for (var item in data) {
+        _favoriteIds.add(item['product_id'] as String);
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching favorites: $e');
+    }
   }
 
   Set<String> get favoriteIds => Set.unmodifiable(_favoriteIds);
@@ -53,20 +61,29 @@ class FavoritesRepository extends ChangeNotifier {
     final user = AuthRepository().currentUser;
     if (user == null) return;
 
-    final docRef = _firestore
-        .collection('users')
-        .doc(user.id)
-        .collection('favorites')
-        .doc(productId);
-
     try {
       if (_favoriteIds.contains(productId)) {
-        await docRef.delete();
+        // Remove
+        await _supabase.from('favorites').delete().match({
+          'user_id': user.id,
+          'product_id': productId,
+        });
+
+        _favoriteIds.remove(productId);
       } else {
-        await docRef.set({'addedAt': FieldValue.serverTimestamp()});
+        // Add
+        await _supabase.from('favorites').insert({
+          'user_id': user.id,
+          'product_id': productId,
+          'added_at': DateTime.now().toIso8601String(),
+        });
+
+        _favoriteIds.add(productId);
       }
+      notifyListeners();
     } catch (e) {
       debugPrint('Error toggling favorite: $e');
+      // Revert local state on error if needed, or just log
     }
   }
 }
