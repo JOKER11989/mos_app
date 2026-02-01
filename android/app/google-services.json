@@ -1,0 +1,29 @@
+{
+    "project_info": {
+        "project_number": "414976334791",
+        "project_id": "mos-app-208ad",
+        "storage_bucket": "mos-app-208ad.firebasestorage.app"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:414976334791:android:2d43e4515efc57a47bd7e2",
+                "android_client_info": {
+                    "package_name": "com.example.mos"
+                }
+            },
+            "oauth_client": [],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyAut8tgyc_-MjH-vsK-onMrG_yoSskYsr0"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": []
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}
