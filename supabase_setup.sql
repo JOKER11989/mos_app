@@ -11,17 +11,19 @@ CREATE TABLE IF NOT EXISTS public.users (
   phone TEXT UNIQUE NOT NULL,
   address TEXT,
   region TEXT,
-  nearest_point TEXT,
-  image_path TEXT,
-  is_admin BOOLEAN DEFAULT FALSE,
-  is_blocked BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+  "nearestPoint" TEXT,
+  "imagePath" TEXT,
+  "isAdmin" BOOLEAN DEFAULT FALSE,
+  "isBlocked" BOOLEAN DEFAULT FALSE,
+  password TEXT,
+  "deviceId" TEXT,
+  "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
 -- Create index on phone for faster lookups
 CREATE INDEX IF NOT EXISTS idx_users_phone ON public.users(phone);
-CREATE INDEX IF NOT EXISTS idx_users_is_admin ON public.users(is_admin);
+CREATE INDEX IF NOT EXISTS idx_users_isAdmin ON public.users("isAdmin");
 
 -- Enable Row Level Security
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -59,20 +61,20 @@ CREATE POLICY "Admins can update any user"
     EXISTS (
       SELECT 1 FROM public.users
       WHERE id = current_setting('app.current_user_id', true)
-      AND is_admin = true
+      AND "isAdmin" = true
     )
   );
 
--- Create function to update updated_at timestamp
+-- Create function to update updatedAt timestamp
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
-  NEW.updated_at = TIMEZONE('utc'::text, NOW());
+  NEW."updatedAt" = TIMEZONE('utc'::text, NOW());
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger to automatically update updated_at
+-- Create trigger to automatically update updatedAt
 DROP TRIGGER IF EXISTS set_updated_at ON public.users;
 CREATE TRIGGER set_updated_at
   BEFORE UPDATE ON public.users
@@ -85,9 +87,9 @@ CREATE TRIGGER set_updated_at
 -- Uncomment the following lines if you want to create a default admin user
 -- Make sure to change the phone number to your actual admin phone
 
--- INSERT INTO public.users (id, name, phone, is_admin, is_blocked)
+-- INSERT INTO public.users (id, name, phone, "isAdmin", "isBlocked")
 -- VALUES ('admin_1', 'Admin', '7711131188', true, false)
--- ON CONFLICT (phone) DO UPDATE SET is_admin = true;
+-- ON CONFLICT (phone) DO UPDATE SET "isAdmin" = true;
 
 -- ============================================
 -- Verification Queries
