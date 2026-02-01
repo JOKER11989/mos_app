@@ -1,8 +1,8 @@
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/product.dart';
 import '../data/product_repository.dart';
 
@@ -129,74 +129,43 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
   Future<List<String>> _uploadNewImages() async {
     final List<String> urls = [];
-    // Explicitly using the bucket from google-services.json
-    final storage = FirebaseStorage.instanceFor(
-      bucket: 'mos-app-208ad.firebasestorage.app',
-    );
-    final storageRef = storage
-        .ref()
-        .child('products')
-        .child(widget.product.id)
-        .child('updates_${DateTime.now().millisecondsSinceEpoch}');
 
     for (int i = 0; i < _newImages.length; i++) {
       final image = _newImages[i];
-      final fileName = 'image_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
-      final fileRef = storageRef.child(fileName);
+      // Create file name
+      final fileName =
+          '${widget.product.id}/update_${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
 
-      debugPrint('Uploading new image $i to bucket: ${storage.bucket}');
-      debugPrint('Path: ${fileRef.fullPath}');
+      try {
+        debugPrint('Uploading new image $i...');
 
-      final metadata = SettableMetadata(contentType: 'image/jpeg');
-      UploadTask uploadTask;
+        // Upload file to Supabase Storage
+        final bytes = await image.readAsBytes();
+        await Supabase.instance.client.storage
+            .from('product_images')
+            .uploadBinary(
+              fileName,
+              bytes,
+              fileOptions: const FileOptions(
+                contentType: 'image/jpeg',
+                upsert: true,
+              ),
+            );
 
-      if (kIsWeb) {
-        uploadTask = fileRef.putData(await image.readAsBytes(), metadata);
-      } else {
-        uploadTask = fileRef.putFile(File(image.path), metadata);
-      }
+        // Get public URL
+        final imageUrl = Supabase.instance.client.storage
+            .from('product_images')
+            .getPublicUrl(fileName);
 
-      // Monitor upload progress
-      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-        double progress =
-            100.0 * (snapshot.bytesTransferred / snapshot.totalBytes);
-        debugPrint(
-          'Upload progress for new image $i: ${progress.toStringAsFixed(2)}%',
-        );
-      });
-
-      // Wait for the upload to complete
-      final TaskSnapshot snapshot = await uploadTask;
-
-      if (snapshot.state == TaskState.success) {
-        debugPrint(
-          'Upload success for new image $i. Bytes: ${snapshot.totalBytes}',
-        );
-
-        // Retry logic for getDownloadURL
-        String? downloadUrl;
-        int retries = 0;
-        while (retries < 3) {
-          try {
-            downloadUrl = await snapshot.ref.getDownloadURL();
-            break;
-          } catch (e) {
-            retries++;
-            debugPrint('Attempt $retries to get URL for new image failed: $e');
-            if (retries < 3) {
-              await Future.delayed(const Duration(seconds: 1));
-            } else {
-              rethrow;
-            }
-          }
+        debugPrint('Got URL for new image $i: $imageUrl');
+        urls.add(imageUrl);
+      } catch (e) {
+        debugPrint('❌ Upload failed for new image $i: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('فشل رفع الصورة رقم ${i + 1}: $e')),
+          );
         }
-
-        if (downloadUrl != null) {
-          debugPrint('Got URL for new image $i: $downloadUrl');
-          urls.add(downloadUrl);
-        }
-      } else {
-        debugPrint('Upload failed for image $i. State: ${snapshot.state}');
         throw Exception('فشل رفع الصورة رقم ${i + 1}');
       }
     }
