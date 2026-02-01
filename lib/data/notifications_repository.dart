@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../models/notification.dart';
 import 'auth_repository.dart';
 
@@ -9,7 +9,7 @@ class NotificationsRepository extends ChangeNotifier {
   factory NotificationsRepository() => _instance;
   NotificationsRepository._internal();
 
-  final _firestore = FirebaseFirestore.instance;
+  final _supabase = Supabase.instance.client;
   List<AppNotification> _notifications = [];
   bool _isInitialized = false;
 
@@ -31,22 +31,16 @@ class NotificationsRepository extends ChangeNotifier {
       return;
     }
 
-    // Real-time listener for this user's notifications
-    _firestore
-        .collection('users')
-        .doc(user.id)
-        .collection('notifications')
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .listen((snapshot) {
-          _notifications = snapshot.docs
-              .map((doc) => AppNotification.fromJson(doc.data()))
+    _supabase
+        .from('notifications')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', user.id)
+        .order('timestamp', ascending: false)
+        .listen((data) {
+          _notifications = data
+              .map((json) => AppNotification.fromJson(json))
               .toList();
           notifyListeners();
-
-          // We can also trigger cleanup here locally if needed,
-          // but better to have a cloud function or TTL index in Firestore.
-          _cleanOldNotificationsLocally();
         });
   }
 
@@ -72,36 +66,23 @@ class NotificationsRepository extends ChangeNotifier {
       productId: productId,
     );
 
+    // Map to Supabase table structure
+    final data = notification.toJson();
+    data['user_id'] = user.id; // Add foreign key
+
     try {
-      await _firestore
-          .collection('users')
-          .doc(user.id)
-          .collection('notifications')
-          .doc(notification.id)
-          .set(notification.toJson());
+      await _supabase.from('notifications').insert(data);
     } catch (e) {
-      debugPrint('Error adding notification to Firestore: $e');
+      debugPrint('Error adding notification to Supabase: $e');
     }
   }
 
-  // مسح الإشعارات التي مر عليها أكثر من 30 يوم (محلياً لتقليل الزحام، ويُفضل استخدام TTL في فيرببيس)
-  void _cleanOldNotificationsLocally() {
-    // Note: For a real production app with Firestore,
-    // you should use a "TTL" (Time To Live) policy in the Firestore console
-    // on the 'timestamp' field to auto-delete old docs.
-  }
-
   Future<void> markAsRead(String id) async {
-    final user = AuthRepository().currentUser;
-    if (user == null) return;
-
     try {
-      await _firestore
-          .collection('users')
-          .doc(user.id)
-          .collection('notifications')
-          .doc(id)
-          .update({'isRead': true});
+      await _supabase
+          .from('notifications')
+          .update({'isRead': true})
+          .eq('id', id);
     } catch (e) {
       debugPrint('Error marking notification as read: $e');
     }
@@ -112,34 +93,19 @@ class NotificationsRepository extends ChangeNotifier {
     if (user == null) return;
 
     try {
-      final batch = _firestore.batch();
-      final snapshots = await _firestore
-          .collection('users')
-          .doc(user.id)
-          .collection('notifications')
-          .where('isRead', isEqualTo: false)
-          .get();
-
-      for (var doc in snapshots.docs) {
-        batch.update(doc.reference, {'isRead': true});
-      }
-      await batch.commit();
+      await _supabase
+          .from('notifications')
+          .update({'isRead': true})
+          .eq('user_id', user.id)
+          .eq('isRead', false);
     } catch (e) {
       debugPrint('Error marking all as read: $e');
     }
   }
 
   Future<void> deleteNotification(String id) async {
-    final user = AuthRepository().currentUser;
-    if (user == null) return;
-
     try {
-      await _firestore
-          .collection('users')
-          .doc(user.id)
-          .collection('notifications')
-          .doc(id)
-          .delete();
+      await _supabase.from('notifications').delete().eq('id', id);
     } catch (e) {
       debugPrint('Error deleting notification: $e');
     }
@@ -150,17 +116,7 @@ class NotificationsRepository extends ChangeNotifier {
     if (user == null) return;
 
     try {
-      final batch = _firestore.batch();
-      final snapshots = await _firestore
-          .collection('users')
-          .doc(user.id)
-          .collection('notifications')
-          .get();
-
-      for (var doc in snapshots.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
+      await _supabase.from('notifications').delete().eq('user_id', user.id);
     } catch (e) {
       debugPrint('Error clearing notifications: $e');
     }

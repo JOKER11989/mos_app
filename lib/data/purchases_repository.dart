@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../models/product.dart';
 import 'auth_repository.dart';
 
@@ -8,7 +8,7 @@ class PurchasesRepository extends ChangeNotifier {
   factory PurchasesRepository() => _instance;
   PurchasesRepository._internal();
 
-  final _firestore = FirebaseFirestore.instance;
+  final _supabase = Supabase.instance.client;
   List<Product> _purchases = [];
   bool _isInitialized = false;
 
@@ -29,17 +29,13 @@ class PurchasesRepository extends ChangeNotifier {
       return;
     }
 
-    // Real-time listener for this user's purchases
-    _firestore
-        .collection('users')
-        .doc(user.id)
-        .collection('purchases')
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .listen((snapshot) {
-          _purchases = snapshot.docs
-              .map((doc) => Product.fromJson(doc.data()))
-              .toList();
+    _supabase
+        .from('purchases')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', user.id)
+        .order('timestamp', ascending: false)
+        .listen((data) {
+          _purchases = data.map((json) => Product.fromJson(json)).toList();
           notifyListeners();
         });
   }
@@ -51,24 +47,23 @@ class PurchasesRepository extends ChangeNotifier {
     if (user == null) return;
 
     try {
-      // Check for duplicates before adding
-      final doc = await _firestore
-          .collection('users')
-          .doc(user.id)
-          .collection('purchases')
-          .doc(product.id)
-          .get();
+      // Check for duplicates
+      final data = await _supabase
+          .from('purchases')
+          .select()
+          .eq('user_id', user.id)
+          .eq('id', product.id)
+          .maybeSingle();
 
-      if (!doc.exists) {
-        await _firestore
-            .collection('users')
-            .doc(user.id)
-            .collection('purchases')
-            .doc(product.id)
-            .set(product.toJson());
+      if (data == null) {
+        // Map to table structure
+        final productJson = product.toJson();
+        productJson['user_id'] = user.id;
+
+        await _supabase.from('purchases').insert(productJson);
       }
     } catch (e) {
-      debugPrint('Error adding purchase to Firestore: $e');
+      debugPrint('Error adding purchase to Supabase: $e');
     }
   }
 
@@ -77,17 +72,7 @@ class PurchasesRepository extends ChangeNotifier {
     if (user == null) return;
 
     try {
-      final batch = _firestore.batch();
-      final snapshots = await _firestore
-          .collection('users')
-          .doc(user.id)
-          .collection('purchases')
-          .get();
-
-      for (var doc in snapshots.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
+      await _supabase.from('purchases').delete().eq('user_id', user.id);
     } catch (e) {
       debugPrint('Error clearing purchases: $e');
     }

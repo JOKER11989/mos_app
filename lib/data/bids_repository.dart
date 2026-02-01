@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../models/bid.dart';
 import 'auth_repository.dart';
 
@@ -8,22 +8,24 @@ class BidsRepository extends ChangeNotifier {
   factory BidsRepository() => _instance;
   BidsRepository._internal();
 
-  final _firestore = FirebaseFirestore.instance;
+  final _supabase = Supabase.instance.client;
 
-  // سجل كامل للمزايدات (يتم تحديثه لحظياً من فيربيس)
+  // سجل كامل للمزايدات
   List<Bid> _bidHistory = [];
   bool _isInitialized = false;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    // Listen to ALL bids in real-time
-    _firestore.collection('bids').snapshots().listen((snapshot) {
-      _bidHistory = snapshot.docs
-          .map((doc) => Bid.fromJson(doc.data()))
-          .toList();
-      notifyListeners();
-    });
+    // Supabase Realtime for 'bids' table
+    _supabase
+        .from('bids')
+        .stream(primaryKey: ['id'])
+        .order('timestamp', ascending: false)
+        .listen((data) {
+          _bidHistory = data.map((json) => Bid.fromJson(json)).toList();
+          notifyListeners();
+        });
 
     _isInitialized = true;
   }
@@ -48,7 +50,7 @@ class BidsRepository extends ChangeNotifier {
     );
   }
 
-  // إضافة مزايدة جديدة إلى فيربيس
+  // إضافة مزايدة جديدة
   Future<void> addBid({
     required String productId,
     required String userId,
@@ -65,9 +67,9 @@ class BidsRepository extends ChangeNotifier {
     );
 
     try {
-      await _firestore.collection('bids').doc(bid.id).set(bid.toJson());
+      await _supabase.from('bids').insert(bid.toJson());
     } catch (e) {
-      debugPrint('Error adding bid to Firestore: $e');
+      debugPrint('Error adding bid to Supabase: $e');
     }
   }
 
@@ -110,9 +112,6 @@ class BidsRepository extends ChangeNotifier {
   }
 
   Future<void> clearData() async {
-    // In Firebase context, clearData usually means local session cleanup if needed,
-    // but the bids themselves are global.
-    // If the user wants to delete their own bids, that would be a different method.
     _bidHistory.clear();
     notifyListeners();
   }
